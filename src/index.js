@@ -32,9 +32,10 @@ Scene1.init = function () {
     }*/
 }
 
-class Bullet extends Phaser.Physics.Arcade.Sprite {
-    constructor(x, y, angle, speed) {
+class Bullet extends Phaser.Physics.Arcade.Image {
+    constructor(x, y) {
         super(Scene1, x, y, 'circle20');
+
         /*this.angle = angle;
         this.speed = speed;
         this.speedX = speed * Math.sin(angle);
@@ -43,6 +44,8 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
         this.setVelocityY(this.speedY);*/
     }
 }
+
+
 
 Scene1.preload = function () {
     this.load.image('circle50', 'assets/circle50.png');
@@ -54,65 +57,33 @@ Scene1.create = function () {
     this.player = this.physics.add.sprite(this.CENTER_X, 600, 'circle50');
     this.player.setCollideWorldBounds(true);
 
+    console.log(this.player)
+
     this.cursors = this.input.keyboard.addKeys('w,a,s,d,up,down,left,right,space');
-    this.keys = {};
-    this.keys.left = function () {
-        return (Scene1.cursors.left.isDown || Scene1.cursors.a.isDown)
-    };
-    this.keys.right = function () {
-        return (Scene1.cursors.right.isDown || Scene1.cursors.d.isDown)
-    };
-    this.keys.up = function () {
-        return (Scene1.cursors.up.isDown || Scene1.cursors.w.isDown)
-    };
-    this.keys.down = function () {
-        return (Scene1.cursors.down.isDown || Scene1.cursors.s.isDown)
-    };
 
-    this.checkMovement = function () {
-        // direction key movement
-        if (this.keys.up()) {
-            if (this.keys.left()) {
-                this.player.setVelocity(-this.PLAYER_DIAG_SPEED_COMPONENT, -this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else if (this.keys.right()) {
-                this.player.setVelocity(this.PLAYER_DIAG_SPEED_COMPONENT, -this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else {
-                this.player.setVelocity(0, -this.PLAYER_SPEED);
-            }
-        } else if (this.keys.left()) {
-            if (this.keys.up()) {
-                this.player.setVelocity(-this.PLAYER_DIAG_SPEED_COMPONENT, -this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else if (this.keys.down()) {
-                this.player.setVelocity(-this.PLAYER_DIAG_SPEED_COMPONENT, this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else {
-                this.player.setVelocity(-this.PLAYER_SPEED, 0);
-            }
-        } else if (this.keys.down()) {
-            if (this.keys.left()) {
-                this.player.setVelocity(-this.PLAYER_DIAG_SPEED_COMPONENT, this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else if (this.keys.right()) {
-                this.player.setVelocity(this.PLAYER_DIAG_SPEED_COMPONENT, this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else {
-                this.player.setVelocity(0, this.PLAYER_SPEED);
-            }
-        } else if (this.keys.right()) {
-            if (this.keys.up()) {
-                this.player.setVelocity(this.PLAYER_DIAG_SPEED_COMPONENT, -this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else if (this.keys.down()) {
-                this.player.setVelocity(this.PLAYER_DIAG_SPEED_COMPONENT, this.PLAYER_DIAG_SPEED_COMPONENT);
-            } else {
-                this.player.setVelocity(this.PLAYER_SPEED, 0);
-            }
-        } else {
-            this.player.setVelocity(0, 0);
-        }
-    }
-
+    var b = new Bullet(300, 500);
+    console.log(b)
 }
 
-Scene1.update = function () {
+Scene1.update = function (time, delta) {
 
-    this.checkMovement();
+    if (this.cursors.w.isDown) {
+        this.player.setAccelerationY(-800);
+    } else if (this.cursors.s.isDown) {
+        this.player.setAccelerationY(800);
+    } else {
+        this.player.setAccelerationY(0);
+    }
+
+    if (this.cursors.a.isDown) {
+        this.player.setAccelerationX(-800);
+    } else if (this.cursors.d.isDown) {
+        this.player.setAccelerationX(800)
+    } else {
+        this.player.setAccelerationX(0);
+    }
+
+    
 
     if (this.cursors.space.isDown) {
         let bullet = this.physics.add.sprite(this.player.x, this.player.y, 'circle20');
