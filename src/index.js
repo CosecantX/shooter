@@ -1,97 +1,142 @@
 import Phaser from 'phaser';
 
-let Scene1 = new Phaser.Scene();
+const gameOptions = {
+    playerSpeed: 200,
+    bulletSpeed: 500,
+    bulletTime: 2000,
+}
 
-const config = {
-    type: Phaser.AUTO,
-    parent: "cnv",
-    width: 600,
-    height: 800,
-    scene: Scene1,
-    physics: {
-        default: 'arcade',
-        arcade: {
-            debug: true
+const WIDTH = 600;
+const HEIGHT = 800;
+const CENTER_X = WIDTH / 2;
+const CENTER_Y = HEIGHT / 2;
+
+//const DIAG_SPEED = gameOptions.playerSpeed * Math.sin(Math.PI / 4);
+
+var player;
+var cursor;
+var keys;
+
+window.onload = function () {
+    const config = {
+        type: Phaser.AUTO,
+        parent: "cnv",
+        width: WIDTH,
+        height: HEIGHT,
+        scene: gameScene,
+        physics: {
+            default: 'arcade',
+            arcade: {
+                //debug: true
+            }
         }
     }
-};
+    const game = new Phaser.Game(config);
+    window.focus();
+}
 
-Scene1.init = function () {
-    this.WIDTH = game.config.width;
-    this.HEIGHT = game.config.height;
-    this.CENTER_X = this.WIDTH / 2;
-    this.CENTER_Y = this.HEIGHT / 2;
-    this.PLAYER_SPEED = 250;
-    this.PLAYER_DIAG_SPEED_COMPONENT = Math.sin(Phaser.Math.DegToRad(45)) * this.PLAYER_SPEED;
+class Player extends Phaser.Physics.Arcade.Sprite {
+    constructor(scene) {
+        super(scene, CENTER_X, 600, 'circle50')
+        scene.physics.add.existing(scene.add.existing(this));
+    }
+}
 
-    /*this.getXYVelocities = function (angle, speed) {
+class Bullet extends Phaser.Physics.Arcade.Image {
+    constructor(scene) {
+        super(scene, player.x, player.y, 'circle20')
+        scene.physics.add.existing(scene.add.existing(this));
+
+        this.born = 0;
+
+    }
+
+    update(time, delta) {
+        this.born += delta;
+        if (this.born > gameOptions.bulletTime) {
+            this.setActive(false);
+            this.setVisible(false);
+        }
+    }
+
+    fire() {
+        this.born = 0;
+        this.x = player.x;
+        this.y = player.y;
+
+        this.angle = Math.PI / 2 + Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y);
+
+        let v = this.getXYVelocities(this.angle, gameOptions.bulletSpeed);
+        this.setVelocity(v.x, v.y);
+    }
+
+    getXYVelocities(angle, speed) {
         return {
             x: (speed * Math.sin(angle)), // Horizontal component
             y: (speed * -Math.cos(angle)) // Vertical component
         };
-    }*/
-}
-
-class Bullet extends Phaser.Physics.Arcade.Image {
-    constructor(x, y) {
-        super(Scene1, x, y, 'circle20');
-
-        /*this.angle = angle;
-        this.speed = speed;
-        this.speedX = speed * Math.sin(angle);
-        this.speedY = speed * -Math.cos(angle);
-        this.setVelocityX(this.speedX);
-        this.setVelocityY(this.speedY);*/
     }
 }
 
-
-
-Scene1.preload = function () {
-    this.load.image('circle50', 'assets/circle50.png');
-    this.load.image('circle20', 'assets/circle20.png');
-}
-
-Scene1.create = function () {
-    this.physics.world.setBounds(0, 0, this.WIDTH, this.HEIGHT);
-    this.player = this.physics.add.sprite(this.CENTER_X, 600, 'circle50');
-    this.player.setCollideWorldBounds(true);
-
-    console.log(this.player)
-
-    this.cursors = this.input.keyboard.addKeys('w,a,s,d,up,down,left,right,space');
-
-    var b = new Bullet(300, 500);
-    console.log(b)
-}
-
-Scene1.update = function (time, delta) {
-
-    if (this.cursors.w.isDown) {
-        this.player.setAccelerationY(-800);
-    } else if (this.cursors.s.isDown) {
-        this.player.setAccelerationY(800);
-    } else {
-        this.player.setAccelerationY(0);
+class gameScene extends Phaser.Scene {
+    constructor() {
+        super('GameScene');
     }
 
-    if (this.cursors.a.isDown) {
-        this.player.setAccelerationX(-800);
-    } else if (this.cursors.d.isDown) {
-        this.player.setAccelerationX(800)
-    } else {
-        this.player.setAccelerationX(0);
+    preload() {
+        this.load.image('circle50', 'assets/circle50.png');
+        this.load.image('circle20', 'assets/circle20.png');
     }
 
-    
+    create() {
+        this.physics.world.setBounds(0, 0, WIDTH, HEIGHT);
+        player = new Player(this);
+        player.setCollideWorldBounds(true);
 
-    if (this.cursors.space.isDown) {
-        let bullet = this.physics.add.sprite(this.player.x, this.player.y, 'circle20');
-        bullet.setVelocityY(-350);
+        this.playerBullets = this.physics.add.group({classType: Bullet, runChildUpdate: true});
+        this.enemyBullets = this.physics.add.group({classType: Bullet, runChildUpdate: true});
+
+        cursor = this.physics.add.image(CENTER_X, CENTER_Y, 'circle20');
+
+        keys = this.input.keyboard.addKeys('W,A,S,D');
+
+        this.input.on('pointermove', (pointer) => {
+            cursor.setPosition(pointer.x, pointer.y)
+        })
+
+        this.input.on('pointerdown', pointer => {
+            let bullet = this.playerBullets.get().setActive(true).setVisible(true);
+            if (bullet) {
+                bullet.fire();
+            }
+        })
+    }
+
+    update() {
+        player.angle = Math.PI / 2 + Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y);
+
+        this.handleKeys();
+
+    }
+
+    handleKeys() {
+
+        if (keys.W.isDown) {
+            player.setVelocityY(-gameOptions.playerSpeed);
+        } else if (keys.S.isDown) {
+            player.setVelocityY(gameOptions.playerSpeed);
+        } else {
+            player.setVelocityY(0);
+        }
+
+        if (keys.A.isDown) {
+            player.setVelocityX(-gameOptions.playerSpeed);
+        } else if (keys.D.isDown) {
+            player.setVelocityX(gameOptions.playerSpeed);
+        } else {
+            player.setVelocityX(0);
+        }
+
     }
 
 }
-
-
-
-const game = new Phaser.Game(config);
