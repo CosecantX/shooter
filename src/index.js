@@ -2,11 +2,14 @@ import Phaser from 'phaser';
 
 var game;
 const gameOptions = {
-    playerSpeed: 300,
+    playerSpeed: 200,
     playerDiagSpeed: -1,
+    playerHP: 100,
     bulletSpeed: 500,
     bulletTime: 2000,
     fireRate: 100,
+    eFireRate: 200,
+    eMoveRate: 500,
 }
 gameOptions.playerDiagSpeed = gameOptions.playerSpeed * Math.sin(Math.PI / 4)
 
@@ -15,21 +18,22 @@ const HEIGHT = 800;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 
-/*const ANGLES = {
-    right: 0,
+const ANGLES = {
+    right: Math.PI / 2,
     upRight: Math.PI / 4,
-    up: Math.PI / 2,
-    upLeft: (3 * Math.PI) / 4,
-    left: Math.PI,
-    downLeft: (5 * Math.PI) / 4,
-    down: (3 * Math.PI) / 2,
-    downRight: (7 * Math.PI) / 4,
-}*/
+    up: 0,
+    upLeft: -Math.PI / 4,
+    left: -Math.PI / 2,
+    downLeft: -(3 * Math.PI) / 4,
+    down: Math.PI,
+    downRight: (3 * Math.PI) / 4,
+}
 
 
 var player;
 var cursor;
 var keys;
+var text;
 
 window.onload = function () {
     const config = {
@@ -41,7 +45,7 @@ window.onload = function () {
         physics: {
             default: 'arcade',
             arcade: {
-                debug: true
+                //debug: true
             }
         }
     }
@@ -51,46 +55,9 @@ window.onload = function () {
     window.addEventListener('resize', resizeGame);
 }
 
-class Player extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene) {
-        super(scene, CENTER_X, 600, 'ship');
-        scene.physics.add.existing(scene.add.existing(this));
-        this.setSize(12, 12);
-        this.setDepth(1);
-        scene.events.on('update', (time, delta) => {
-            this.update(time, delta)
-        });
-
-        this.fireTimer = gameOptions.fireRate;
-        this.fireBullet = false;
-        this.moveAngle = 0;
-    }
-
-    update(time, delta) {
-        if (this.fireTimer > 0) {
-            this.fireTimer -= delta;
-        } else if (this.fireBullet) {
-            let bullet = this.scene.playerBullets.get().setActive(true).setVisible(true);
-            if (bullet) {
-                bullet.fire(player, cursor);
-            }
-            this.fireTimer = gameOptions.fireRate;
-        }
-    }
-
-    /*move(angle) {
-        if (angle) {
-            this.moveAngle = angle;
-        }
-
-        let v = getXYVelocities(this.moveAngle, gameOptions.playerSpeed);
-        this.setVelocity(v.x, v.y);
-    }*/
-}
-
 class Bullet extends Phaser.Physics.Arcade.Image {
-    constructor(scene) {
-        super(scene, -10, -10, 'shot')
+    constructor(scene, type) {
+        super(scene, -100, -100, type)
         scene.physics.add.existing(scene.add.existing(this));
         this.setSize(this.width, this.width);
 
@@ -117,6 +84,139 @@ class Bullet extends Phaser.Physics.Arcade.Image {
     }
 }
 
+class pBullet extends Bullet {
+    constructor(scene) {
+        super(scene, 'shot')
+    }
+}
+
+class eBullet extends Bullet {
+    constructor(scene) {
+        super(scene, 'eshot')
+    }
+}
+
+class Ship extends Phaser.Physics.Arcade.Sprite {
+    constructor(scene, x, y, type) {
+        super(scene, x, y, type)
+        scene.physics.add.existing(scene.add.existing(this));
+        this.setSize(12, 12);
+        this.setDepth(1);
+        scene.events.on('update', (time, delta) => {
+            this.update(time, delta)
+        });
+    }
+}
+
+class Player extends Ship {
+    constructor(scene) {
+        super(scene, CENTER_X, 600, 'ship');
+
+        this.fireTimer = gameOptions.fireRate;
+        this.fireBullet = false;
+        this.hp = gameOptions.playerHP;
+    }
+
+    update(time, delta) {
+        this.rotation = Math.PI / 2 + Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y);
+
+        if (this.fireTimer > 0) {
+            this.fireTimer -= delta;
+        } else if (this.fireBullet) {
+            let bullet = this.scene.playerBullets.get().setActive(true).setVisible(true);
+            if (bullet) {
+                bullet.fire(player, cursor);
+            }
+            this.fireTimer = gameOptions.fireRate;
+        }
+    }
+
+    removeHP(num) {
+        this.hp -= num;
+        if (this.hp <= 0) {
+            text.setText('GAMEOVER');
+        } else {
+            text.setText('HP: ' + this.hp);
+        }
+    }
+
+    addHP(num) {
+        this.hp += num;
+        if (this.hp > gameOptions.playerHP) {
+            this.hp = gameOptions.playerHP;
+        }
+        text.setText('HP: ' + this.hp);
+    }
+
+}
+
+class Shuffler extends Ship {
+    constructor(scene, x, y) {
+        super(scene, x, y, 'ship');
+
+        this.moveAngle = 0;
+        this.moveTimer = gameOptions.eMoveRate;
+        this.fireTimer = gameOptions.eFireRate;
+        
+        this.rotation = ANGLES.down;
+    }
+
+    update(time, delta) {
+        if(this.moveTimer > 0) {
+            this.moveTimer -= delta;
+        } else {
+            this.moveAngle = Phaser.Math.RND.rotation();
+            this.move();
+            this.moveTimer = gameOptions.eMoveRate;
+        }
+
+        if (this.fireTimer > 0) {
+            this.fireTimer -= delta;
+        } else {
+            let bullet = this.scene.enemyBullets.get().setActive(true).setVisible(true);
+            if (bullet) {
+                bullet.fire(this, player);
+                this.rotation = Math.PI / 2 + Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+            }
+            this.fireTimer = gameOptions.eFireRate;
+        }
+    }
+
+    move(angle) {
+        if (angle) {
+            this.moveAngle = angle;
+        }
+
+        let v = getXYVelocities(this.moveAngle, gameOptions.playerSpeed);
+        this.setVelocity(v.x, v.y);
+    }
+
+}
+
+class Spinner extends Ship {
+    constructor(scene, x, y) {
+        super(scene, x, y, 'ship');
+
+        this.moveAngle = 0;
+        this.moveTimer = gameOptions.eMoveRate;
+        this.fireTimer = gameOptions.eFireRate;
+        
+        this.rotation = ANGLES.down;
+    }
+
+    update(time, delta) {
+        if (this.fireTimer > 0) {
+            this.fireTimer -= delta;
+        } else {
+            let bullet = this.scene.enemyBullets.get().setActive(true).setVisible(true);
+            if (bullet) {
+                bullet.fire(this, player);
+            }
+            this.fireTimer = gameOptions.eFireRate;
+        }
+    }
+}
+
 class loadScene extends Phaser.Scene {
     constructor() {
         super('LoadScene');
@@ -127,6 +227,7 @@ class loadScene extends Phaser.Scene {
         this.load.image('circle20', 'assets/circle20.png');
         this.load.image('ship', 'assets/ship.png');
         this.load.image('shot', 'assets/shot.png');
+        this.load.image('eshot', 'assets/eshot.png');
     }
 
     create() {
@@ -144,16 +245,21 @@ class gameScene extends Phaser.Scene {
         player = new Player(this);
         player.setCollideWorldBounds(true);
 
+        text = this.add.text(10, 10, 'HP: ' + player.hp);
+
+        let enemy = new Shuffler(this, CENTER_X, 20);
+        enemy.setCollideWorldBounds(true);
+
         this.playerBullets = this.physics.add.group({
-            classType: Bullet,
+            classType: pBullet,
             runChildUpdate: true
         });
         this.enemyBullets = this.physics.add.group({
-            classType: Bullet,
+            classType: eBullet,
             runChildUpdate: true
         });
 
-        cursor = this.physics.add.image(CENTER_X, CENTER_Y, 'circle20');
+        cursor = this.physics.add.image(CENTER_X, -100, 'circle20');
 
         keys = this.input.keyboard.addKeys('W,A,S,D');
 
@@ -168,10 +274,19 @@ class gameScene extends Phaser.Scene {
         this.input.on('pointerup', pointer => {
             player.fireBullet = false;
         })
+
+        this.physics.add.overlap(cursor, this.enemyBullets, (c, b) => {
+            b.setActive(false).setVisible(false);
+            player.addHP(1);
+        })
+
+        this.physics.add.overlap(player, this.enemyBullets, (p, b) => {
+            b.setActive(false).setVisible(false);
+            player.removeHP(10)
+        })
     }
 
     update() {
-        player.rotation = Math.PI / 2 + Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y);
 
         this.handleKeys();
 
