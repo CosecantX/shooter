@@ -382,7 +382,7 @@ class gameScene extends Phaser.Scene {
 
         this.physics.add.overlap(this.playerBullets, this.enemyGroup, (b, e) => {
             b.destroy();
-            this.enemyGroup.kill(e)
+            e.destroy();
             console.log(b)
             console.log(e)
         })
