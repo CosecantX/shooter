@@ -41,6 +41,7 @@ const ANGLES = {
 
 var player;
 var cursor;
+var shield;
 var keys;
 var text;
 var topLine = new Phaser.Geom.Line(10, 10, WIDTH - 10, 10);
@@ -56,7 +57,7 @@ window.onload = function () {
         physics: {
             default: 'arcade',
             arcade: {
-                debug: true
+                //debug: true
             }
         }
     }
@@ -118,6 +119,10 @@ class Ship extends Phaser.Physics.Arcade.Sprite {
             this.update(time, delta)
         });
     }
+
+    remove() {
+        this.destroy();
+    }
 }
 
 class Player extends Ship {
@@ -166,6 +171,17 @@ class Player extends Ship {
         text.setText('HP: ' + this.hp);
     }
 
+}
+
+class Shield extends Phaser.Physics.Arcade.Image {
+    constructor(scene) {
+        super(scene, 100, 100, 'shot');
+        scene.physics.add.existing(scene.add.existing(this));
+        this.setSize(this.height, this.height);
+        this.setDepth(1);
+
+
+    }
 }
 
 class Shuffler extends Ship {
@@ -321,7 +337,9 @@ class gameScene extends Phaser.Scene {
         //let spinner = new Spinner(this, CENTER_X, CENTER_Y)
         //console.log(spinner);
 
-        this.enemyGroup = this.physics.add.group();
+        this.enemyGroup = this.physics.add.group({
+            collideWorldBounds: true,
+        });
 
         this.playerBullets = this.physics.add.group({
             classType: pBullet,
@@ -333,6 +351,8 @@ class gameScene extends Phaser.Scene {
         });
 
         cursor = this.physics.add.image(CENTER_X, -100, 'circle20');
+
+        shield = new Shield(this);
 
         keys = this.input.keyboard.addKeys('W,A,S,D');
 
@@ -348,7 +368,7 @@ class gameScene extends Phaser.Scene {
             player.fireBullet = false;
         })
 
-        this.physics.add.overlap(cursor, this.enemyBullets, (c, b) => {
+        this.physics.add.overlap(shield, this.enemyBullets, (c, b) => {
             b.destroy();
             //b.setActive(false).setVisible(false);
             player.addHP(1);
@@ -358,6 +378,13 @@ class gameScene extends Phaser.Scene {
             b.destroy();
             //b.setActive(false).setVisible(false);
             player.removeHP(10);
+        })
+
+        this.physics.add.overlap(this.playerBullets, this.enemyGroup, (b, e) => {
+            b.destroy();
+            this.enemyGroup.kill(e)
+            console.log(b)
+            console.log(e)
         })
     }
 
