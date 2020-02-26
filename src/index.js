@@ -115,9 +115,10 @@ class Ship extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(scene.add.existing(this));
         this.setSize(12, 12);
         this.setDepth(1);
-        scene.events.on('update', (time, delta) => {
-            this.update(time, delta)
-        });
+    }
+    
+    preUpdate(time, delta) {
+        this.update(time, delta)
     }
 
     remove() {
