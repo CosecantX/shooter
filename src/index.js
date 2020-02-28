@@ -7,19 +7,23 @@ const gameOptions = {
     //playerDiagSpeed: -1,
     playerHP: 100,
     playerFireRate: 100,
+    playerHitBox: 12,
+    shieldDistance: 30,
 
     spawnTimer: 5000,
     bulletSpeed: 500,
     bulletLife: 2000,
 
-    shfFireRate: 200,
+    shfFireRate: 300,
     shfMoveRate: 500,
     shfMoveSpeed: 200,
+    shfHitBox: 20,
 
     spnSpinRate: .03,
-    spnFireRate: 200,
+    spnFireRate: 100,
     spnMoveRate: 2000,
     spnMoveSpeed: 100,
+    spnHitBox: 20,
 }
 //gameOptions.playerDiagSpeed = gameOptions.playerSpeed * Math.sin(Math.PI / 4);
 
@@ -113,7 +117,6 @@ class Ship extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, type) {
         super(scene, x, y, type)
         scene.physics.add.existing(scene.add.existing(this));
-        this.setSize(12, 12);
         this.setDepth(1);
     }
     
@@ -130,6 +133,7 @@ class Player extends Ship {
     constructor(scene) {
         super(scene, CENTER_X, 600, 'ship');
         this.setCollideWorldBounds(true);
+        this.setSize(gameOptions.playerHitBox, gameOptions.playerHitBox);
 
         this.fireTimer = gameOptions.playerFireRate;
         this.fireBullet = false;
@@ -137,7 +141,7 @@ class Player extends Ship {
     }
 
     update(time, delta) {
-        this.rotation = Math.PI / 2 + Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y);
+        this.setRotation(Math.PI / 2 + Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y));
         this.tryFire(delta);
 
     }
@@ -180,8 +184,18 @@ class Shield extends Phaser.Physics.Arcade.Image {
         scene.physics.add.existing(scene.add.existing(this));
         this.setSize(this.height, this.height);
         this.setDepth(1);
+    }
 
+    preUpdate(time, delta) {
+        this.update(time, delta)
+    }
 
+    update(time, delta) {
+        let angle = Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y);
+        this.setRotation(angle);
+        let point = new Phaser.Geom.Point(player.x + gameOptions.shieldDistance * Math.cos(angle), player.y + gameOptions.shieldDistance * Math.sin(angle));
+        this.x = point.x;
+        this.y = point.y;
     }
 }
 
@@ -189,6 +203,7 @@ class Shuffler extends Ship {
     constructor(scene, x, y) {
         super(scene, x, y, 'ship');
         this.setCollideWorldBounds(true);
+        this.setSize(gameOptions.shfHitBox, gameOptions.shfHitBox);
 
         this.moveAngle = 0;
         this.moveTimer = gameOptions.shfMoveRate;
@@ -240,6 +255,7 @@ class Spinner extends Ship {
     constructor(scene, x, y) {
         super(scene, x, y, 'ship');
         this.setCollideWorldBounds(true);
+        this.setSize(gameOptions.spnHitBox, gameOptions.spnHitBox);
 
         this.spinDir = +1;
         this.moveAngle = 0;
@@ -384,8 +400,6 @@ class gameScene extends Phaser.Scene {
         this.physics.add.overlap(this.playerBullets, this.enemyGroup, (b, e) => {
             b.destroy();
             e.destroy();
-            console.log(b)
-            console.log(e)
         })
     }
 
