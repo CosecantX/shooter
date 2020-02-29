@@ -9,6 +9,10 @@ const gameOptions = {
     playerFireRate: 100,
     playerHitBox: 12,
     shieldDistance: 30,
+    playerHitTime: 500,
+    playerHitHP: 10,
+    playerShieldHP: 1,
+
 
     spawnTimer: 5000,
     bulletSpeed: 500,
@@ -124,9 +128,6 @@ class Ship extends Phaser.Physics.Arcade.Sprite {
         this.update(time, delta)
     }
 
-    remove() {
-        this.destroy();
-    }
 }
 
 class Player extends Ship {
@@ -138,10 +139,17 @@ class Player extends Ship {
         this.fireTimer = gameOptions.playerFireRate;
         this.fireBullet = false;
         this.hp = gameOptions.playerHP;
+        this.hitTimer = 0;
+        this.hitOK = true;
     }
 
     update(time, delta) {
         this.setRotation(Math.PI / 2 + Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y));
+        if (this.hitTimer > 0) {
+            this.hitTimer -= delta;
+        } else if (!this.hitOK) {
+            this.hitOK = true;
+        }
         this.tryFire(delta);
 
     }
@@ -155,6 +163,14 @@ class Player extends Ship {
                 bullet.fire(player, cursor);
             }
             this.fireTimer = gameOptions.playerFireRate;
+        }
+    }
+    
+    hit() {
+        if (this.hitOK) {
+            this.removeHP(gameOptions.playerHitHP);
+            this.hitOK = false;
+            this.hitTimer = gameOptions.playerHitTime;
         }
     }
 
@@ -201,15 +217,13 @@ class Shield extends Phaser.Physics.Arcade.Image {
 
 class Shuffler extends Ship {
     constructor(scene, x, y) {
-        super(scene, x, y, 'ship');
+        super(scene, x, y, 'shuffler');
         this.setCollideWorldBounds(true);
         this.setSize(gameOptions.shfHitBox, gameOptions.shfHitBox);
 
         this.moveAngle = 0;
         this.moveTimer = gameOptions.shfMoveRate;
         this.fireTimer = gameOptions.shfFireRate;
-
-        this.setRotation(ANGLES.down);;
     }
 
     update(time, delta) {
@@ -253,7 +267,7 @@ class Shuffler extends Ship {
 
 class Spinner extends Ship {
     constructor(scene, x, y) {
-        super(scene, x, y, 'ship');
+        super(scene, x, y, 'spinner');
         this.setCollideWorldBounds(true);
         this.setSize(gameOptions.spnHitBox, gameOptions.spnHitBox);
 
@@ -261,8 +275,6 @@ class Spinner extends Ship {
         this.moveAngle = 0;
         this.moveTimer = gameOptions.spnMoveRate;
         this.fireTimer = gameOptions.spnFireRate;
-
-        this.setRotation(ANGLES.down);
 
         this.line = new Phaser.Geom.Line(x, y - 1, x, y + 1);
     }
@@ -329,6 +341,9 @@ class loadScene extends Phaser.Scene {
         this.load.image('ship', 'assets/ship.png');
         this.load.image('shot', 'assets/shot.png');
         this.load.image('eshot', 'assets/eshot.png');
+        this.load.image('cursor', 'assets/cursor.png');
+        this.load.image('shuffler', 'assets/shuffler.png');
+        this.load.image('spinner', 'assets/spinner.png');
     }
 
     create() {
@@ -367,7 +382,7 @@ class gameScene extends Phaser.Scene {
             runChildUpdate: true
         });
 
-        cursor = this.physics.add.image(CENTER_X, -100, 'circle20');
+        cursor = this.physics.add.image(CENTER_X, -100, 'cursor');
 
         shield = new Shield(this);
 
@@ -394,13 +409,17 @@ class gameScene extends Phaser.Scene {
         this.physics.add.overlap(player, this.enemyBullets, (p, b) => {
             b.destroy();
             //b.setActive(false).setVisible(false);
-            player.removeHP(10);
+            player.hit();
         })
 
         this.physics.add.overlap(this.playerBullets, this.enemyGroup, (b, e) => {
             b.destroy();
             e.destroy();
         })
+
+        this.physics.add.collider(player, this.enemyGroup);
+
+        this.physics.add.collider(this.enemyGroup, this.enemyGroup);
     }
 
     update(time, delta) {
