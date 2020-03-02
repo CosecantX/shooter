@@ -36,17 +36,6 @@ const HEIGHT = 800;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 
-const ANGLES = {
-    right: Math.PI / 2,
-    upRight: Math.PI / 4,
-    up: 0,
-    upLeft: -Math.PI / 4,
-    left: -Math.PI / 2,
-    downLeft: -(3 * Math.PI) / 4,
-    down: Math.PI,
-    downRight: (3 * Math.PI) / 4,
-}
-
 var player;
 var cursor;
 var shield;
@@ -196,7 +185,7 @@ class Player extends Ship {
 
 class Shield extends Phaser.Physics.Arcade.Image {
     constructor(scene) {
-        super(scene, 100, 100, 'shot');
+        super(scene, 100, 100, 'shield');
         scene.physics.add.existing(scene.add.existing(this));
         this.setSize(this.height, this.height);
         this.setDepth(1);
@@ -336,14 +325,13 @@ class loadScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('circle50', 'assets/circle50.png');
-        this.load.image('circle20', 'assets/circle20.png');
         this.load.image('ship', 'assets/ship.png');
         this.load.image('shot', 'assets/shot.png');
         this.load.image('eshot', 'assets/eshot.png');
         this.load.image('cursor', 'assets/cursor.png');
         this.load.image('shuffler', 'assets/shuffler.png');
         this.load.image('spinner', 'assets/spinner.png');
+        this.load.image('shield', 'assets/shield.png');
     }
 
     create() {
@@ -364,10 +352,6 @@ class gameScene extends Phaser.Scene {
 
         this.spawnTimer = gameOptions.spawnTimer;
         this.spawnCount = 2;
-
-        //let shuffler = new Shuffler(this, CENTER_X, 20);
-        //let spinner = new Spinner(this, CENTER_X, CENTER_Y)
-        //console.log(spinner);
 
         this.enemyGroup = this.physics.add.group({
             collideWorldBounds: true,
