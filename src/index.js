@@ -2,18 +2,19 @@ import Phaser from 'phaser';
 
 var game;
 
-const gameOptions = {
+const settings = {
     playerSpeed: 200,
     //playerDiagSpeed: -1,
     playerHP: 100,
     playerFireRate: 100,
     playerHitBox: 12,
     shieldDistance: 30,
-    playerHitTime: 500,
+    playerHitTime: 400,
     playerHitHP: 10,
-    playerShieldHP: 1,
+    //playerShieldHP: 1,
 
-
+    scoreEnemy: 100,
+    scoreShot: 1,
     spawnTimer: 5000,
     bulletSpeed: 500,
     bulletLife: 2000,
@@ -41,8 +42,10 @@ var cursor;
 var shield;
 var keys;
 var text;
-var topLine = new Phaser.Geom.Line(10, 10, WIDTH - 10, 10);
-var bottomLine = new Phaser.Geom.Line(10, HEIGHT - 10, WIDTH - 10, HEIGHT - 10);
+var text2;
+var score = 0;
+var topLine = new Phaser.Geom.Line(10, -10, WIDTH - 10, -10);
+var bottomLine = new Phaser.Geom.Line(10, HEIGHT + 10, WIDTH - 10, HEIGHT + 10);
 
 window.onload = function () {
     const config = {
@@ -76,7 +79,7 @@ class Bullet extends Phaser.Physics.Arcade.Image {
 
     update(time, delta) {
         this.born += delta;
-        if (this.born > gameOptions.bulletLife) {
+        if (this.born > settings.bulletLife) {
             this.setActive(false);
             this.setVisible(false);
         }
@@ -89,7 +92,7 @@ class Bullet extends Phaser.Physics.Arcade.Image {
 
         this.rotation = Math.PI / 2 + Phaser.Math.Angle.Between(source.x, source.y, target.x, target.y);
 
-        let v = getXYVelocities(this.rotation, gameOptions.bulletSpeed);
+        let v = getXYVelocities(this.rotation, settings.bulletSpeed);
         this.setVelocity(v.x, v.y);
     }
 }
@@ -121,13 +124,13 @@ class Ship extends Phaser.Physics.Arcade.Sprite {
 
 class Player extends Ship {
     constructor(scene) {
-        super(scene, CENTER_X, 600, 'ship');
+        super(scene, CENTER_X, CENTER_Y, 'ship');
         this.setCollideWorldBounds(true);
-        this.setSize(gameOptions.playerHitBox, gameOptions.playerHitBox);
+        this.setSize(settings.playerHitBox, settings.playerHitBox);
 
-        this.fireTimer = gameOptions.playerFireRate;
+        this.fireTimer = settings.playerFireRate;
         this.fireBullet = false;
-        this.hp = gameOptions.playerHP;
+        this.hp = settings.playerHP;
         this.hitTimer = 0;
         this.hitOK = true;
     }
@@ -151,15 +154,15 @@ class Player extends Ship {
             if (bullet) {
                 bullet.fire(player, cursor);
             }
-            this.fireTimer = gameOptions.playerFireRate;
+            this.fireTimer = settings.playerFireRate;
         }
     }
     
     hit() {
         if (this.hitOK) {
-            this.removeHP(gameOptions.playerHitHP);
+            this.removeHP(settings.playerHitHP);
             this.hitOK = false;
-            this.hitTimer = gameOptions.playerHitTime;
+            this.hitTimer = settings.playerHitTime;
         }
     }
 
@@ -175,8 +178,8 @@ class Player extends Ship {
 
     addHP(num) {
         this.hp += num;
-        if (this.hp > gameOptions.playerHP) {
-            this.hp = gameOptions.playerHP;
+        if (this.hp > settings.playerHP) {
+            this.hp = settings.playerHP;
         }
         text.setText('HP: ' + this.hp);
     }
@@ -198,7 +201,7 @@ class Shield extends Phaser.Physics.Arcade.Image {
     update(time, delta) {
         let angle = Phaser.Math.Angle.Between(player.x, player.y, cursor.x, cursor.y);
         this.setRotation(angle);
-        let point = new Phaser.Geom.Point(player.x + gameOptions.shieldDistance * Math.cos(angle), player.y + gameOptions.shieldDistance * Math.sin(angle));
+        let point = new Phaser.Geom.Point(player.x + settings.shieldDistance * Math.cos(angle), player.y + settings.shieldDistance * Math.sin(angle));
         this.x = point.x;
         this.y = point.y;
     }
@@ -207,12 +210,12 @@ class Shield extends Phaser.Physics.Arcade.Image {
 class Shuffler extends Ship {
     constructor(scene, x, y) {
         super(scene, x, y, 'shuffler');
-        this.setCollideWorldBounds(true);
-        this.setSize(gameOptions.shfHitBox, gameOptions.shfHitBox);
+        //this.setCollideWorldBounds(true);
+        this.setSize(settings.shfHitBox, settings.shfHitBox);
 
         this.moveAngle = 0;
-        this.moveTimer = gameOptions.shfMoveRate;
-        this.fireTimer = gameOptions.shfFireRate;
+        this.moveTimer = settings.shfMoveRate;
+        this.fireTimer = settings.shfFireRate;
     }
 
     update(time, delta) {
@@ -229,7 +232,7 @@ class Shuffler extends Ship {
                 bullet.fire(this, player);
                 this.setRotation(Math.PI / 2 + Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y));
             }
-            this.fireTimer = gameOptions.shfFireRate;
+            this.fireTimer = settings.shfFireRate;
         }
     }
 
@@ -239,7 +242,7 @@ class Shuffler extends Ship {
         } else {
             this.moveAngle = Phaser.Math.RND.rotation();
             this.move();
-            this.moveTimer = gameOptions.shfMoveRate;
+            this.moveTimer = settings.shfMoveRate;
         }
     }
 
@@ -248,7 +251,7 @@ class Shuffler extends Ship {
             this.moveAngle = angle;
         }
 
-        let v = getXYVelocities(this.moveAngle, gameOptions.shfMoveSpeed);
+        let v = getXYVelocities(this.moveAngle, settings.shfMoveSpeed);
         this.setVelocity(v.x, v.y);
     }
 
@@ -257,13 +260,13 @@ class Shuffler extends Ship {
 class Spinner extends Ship {
     constructor(scene, x, y) {
         super(scene, x, y, 'spinner');
-        this.setCollideWorldBounds(true);
-        this.setSize(gameOptions.spnHitBox, gameOptions.spnHitBox);
+        //this.setCollideWorldBounds(true);
+        this.setSize(settings.spnHitBox, settings.spnHitBox);
 
         this.spinDir = +1;
         this.moveAngle = 0;
-        this.moveTimer = gameOptions.spnMoveRate;
-        this.fireTimer = gameOptions.spnFireRate;
+        this.moveTimer = settings.spnMoveRate;
+        this.fireTimer = settings.spnFireRate;
 
         this.line = new Phaser.Geom.Line(x, y - 1, x, y + 1);
     }
@@ -281,7 +284,7 @@ class Spinner extends Ship {
         } else {
             this.moveAngle = Phaser.Math.RND.rotation();
             this.move();
-            this.moveTimer = gameOptions.spnMoveRate;
+            this.moveTimer = settings.spnMoveRate;
         }
     }
 
@@ -290,7 +293,7 @@ class Spinner extends Ship {
             this.moveAngle = angle;
         }
 
-        let v = getXYVelocities(this.moveAngle, gameOptions.spnMoveSpeed);
+        let v = getXYVelocities(this.moveAngle, settings.spnMoveSpeed);
         this.setVelocity(v.x, v.y);
     }
 
@@ -299,7 +302,7 @@ class Spinner extends Ship {
     }
 
     rotatePoints() {
-        Phaser.Geom.Line.Rotate(this.line, this.spinDir * gameOptions.spnSpinRate);
+        Phaser.Geom.Line.Rotate(this.line, this.spinDir * settings.spnSpinRate);
         let point = this.line.getPointB();
         this.setRotation(Math.PI / 2 + Phaser.Math.Angle.Between(this.x, this.y, point.x, point.y));
     }
@@ -314,7 +317,7 @@ class Spinner extends Ship {
                 bullet.fire(this, this.line.getPointA());
                 bullet2.fire(this, this.line.getPointB());
             }
-            this.fireTimer = gameOptions.spnFireRate;
+            this.fireTimer = settings.spnFireRate;
         }
     }
 }
@@ -332,6 +335,8 @@ class loadScene extends Phaser.Scene {
         this.load.image('shuffler', 'assets/shuffler.png');
         this.load.image('spinner', 'assets/spinner.png');
         this.load.image('shield', 'assets/shield.png');
+        this.load.image('star-close', 'assets/star-close.png');
+        this.load.image('star-far', 'assets/star-far.png');
     }
 
     create() {
@@ -348,9 +353,10 @@ class gameScene extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, WIDTH, HEIGHT);
         player = new Player(this);
 
-        text = this.add.text(10, 10, 'HP: ' + player.hp);
+        text = this.add.text(10, 10, 'HP: ' + player.hp).setDepth(2);
+        text2 = this.add.text(10, 30, 'Score: ' + score).setDepth(2);
 
-        this.spawnTimer = gameOptions.spawnTimer;
+        this.spawnTimer = settings.spawnTimer;
         this.spawnCount = 2;
 
         this.enemyGroup = this.physics.add.group({
@@ -361,16 +367,17 @@ class gameScene extends Phaser.Scene {
             classType: pBullet,
             runChildUpdate: true
         });
+
         this.enemyBullets = this.physics.add.group({
             classType: eBullet,
             runChildUpdate: true
         });
 
-        cursor = this.physics.add.image(CENTER_X, -100, 'cursor');
+        cursor = this.physics.add.image(-100, -100, 'cursor');
 
         shield = new Shield(this);
 
-        keys = this.input.keyboard.addKeys('W,A,S,D');
+        keys = this.input.keyboard.addKeys('W,A,S,D,C');
 
         this.input.on('pointermove', (pointer) => {
             cursor.setPosition(pointer.x, pointer.y)
@@ -384,21 +391,23 @@ class gameScene extends Phaser.Scene {
             player.fireBullet = false;
         })
 
-        this.physics.add.overlap(shield, this.enemyBullets, (c, b) => {
+        this.physics.add.overlap(shield, this.enemyBullets, (s, b) => {
             b.destroy();
-            //b.setActive(false).setVisible(false);
-            player.addHP(1);
+            //player.addHP(settings.playerShieldHP);
+            score += settings.scoreShot;
+            text2.setText('Score: ' + score);
         })
 
         this.physics.add.overlap(player, this.enemyBullets, (p, b) => {
             b.destroy();
-            //b.setActive(false).setVisible(false);
             player.hit();
         })
 
         this.physics.add.overlap(this.playerBullets, this.enemyGroup, (b, e) => {
             b.destroy();
             e.destroy();
+            score += settings.scoreEnemy;
+            text2.setText('Score: ' + score);
         })
 
         this.physics.add.collider(player, this.enemyGroup);
@@ -415,19 +424,25 @@ class gameScene extends Phaser.Scene {
     handleKeys() {
 
         if (keys.W.isDown) {
-            player.setVelocityY(-gameOptions.playerSpeed);
+            player.setVelocityY(-settings.playerSpeed);
         } else if (keys.S.isDown) {
-            player.setVelocityY(gameOptions.playerSpeed);
+            player.setVelocityY(settings.playerSpeed);
         } else {
             player.setVelocityY(0);
         }
 
         if (keys.A.isDown) {
-            player.setVelocityX(-gameOptions.playerSpeed);
+            player.setVelocityX(-settings.playerSpeed);
         } else if (keys.D.isDown) {
-            player.setVelocityX(gameOptions.playerSpeed);
+            player.setVelocityX(settings.playerSpeed);
         } else {
             player.setVelocityX(0);
+        }
+
+        if (keys.C.isDown) {
+            this.enemyGroup.getChildren().forEach(e => {
+                e.destroy();
+            })
         }
     }
 
@@ -436,7 +451,7 @@ class gameScene extends Phaser.Scene {
             this.spawnTimer -= delta;
         } else {
             this.spawn();
-            this.spawnTimer = gameOptions.spawnTimer;
+            this.spawnTimer = settings.spawnTimer;
         }
     }
 
@@ -445,8 +460,28 @@ class gameScene extends Phaser.Scene {
         let spawn2 = bottomLine.getRandomPoint();
         let enemy1 = this.pickEnemy(spawn1);
         let enemy2 = this.pickEnemy(spawn2);
-        this.enemyGroup.add(enemy1);
-        this.enemyGroup.add(enemy2);
+        this.add.tween({
+            targets: enemy1,
+            ease: 'Linear',
+            duration: 500,
+            y: {start: -10, to: 20},
+            onComplete: function(tween, targets) {
+                targets.forEach(e => {
+                   e.scene.enemyGroup.add(e);
+                })
+            }
+        })
+        this.add.tween({
+            targets: enemy2,
+            ease: 'Linear',
+            duration: 500,
+            y: {start: (HEIGHT + 10), to: (HEIGHT - 20)},
+            onComplete: function(tween, targets) {
+                targets.forEach(e => {
+                    e.scene.enemyGroup.add(e);
+                })
+            }
+        })
     }
 
     pickEnemy(point) {
