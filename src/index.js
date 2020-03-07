@@ -18,6 +18,10 @@ const settings = {
     spawnTimer: 5000,
     bulletSpeed: 500,
     bulletLife: 2000,
+    closeStarDuration: 4000,
+    farStarDuration: 8000,
+    closeStarTimer: 500,
+    farStarTimer: 500,
 
     shfFireRate: 300,
     shfMoveRate: 500,
@@ -322,6 +326,43 @@ class Spinner extends Ship {
     }
 }
 
+class Star extends Phaser.GameObjects.Image {
+    constructor(scene, duration, texture) {
+        super(scene, -10, 10, texture);
+        scene.add.existing(this);
+        this.duration = duration;
+    }
+
+    fire(x) {
+        this.x = x;
+        //this.y = -10;
+        this.scene.add.tween({
+            targets: this,
+            duration: this.duration,
+            y: {start: -10, to: HEIGHT + 10},
+            ease: 'Linear',
+            onComplete: function(tween, targets) {
+                targets.forEach(e => {
+                    e.setActive(false);
+                    e.setVisible(false);
+                })
+            }
+        })
+    }
+}
+
+class CloseStar extends Star {
+    constructor(scene) {
+        super(scene, settings.closeStarDuration, 'star-close');
+    }
+}
+
+class FarStar extends Star {
+    constructor(scene) {
+        super(scene, settings.farStarDuration, 'star-far');
+    }
+}
+
 class loadScene extends Phaser.Scene {
     constructor() {
         super('LoadScene');
@@ -351,13 +392,30 @@ class gameScene extends Phaser.Scene {
 
     create() {
         this.physics.world.setBounds(0, 0, WIDTH, HEIGHT);
+
+        // Set global vars
+
         player = new Player(this);
 
+        cursor = this.physics.add.image(-100, -100, 'cursor');
+
+        shield = new Shield(this);
+
+        keys = this.input.keyboard.addKeys('W,A,S,D,C');
+
         text = this.add.text(10, 10, 'HP: ' + player.hp).setDepth(2);
+
         text2 = this.add.text(10, 30, 'Score: ' + score).setDepth(2);
 
+        // Set timers
+
         this.spawnTimer = settings.spawnTimer;
-        this.spawnCount = 2;
+
+        this.closeStarTimer = settings.closeStarTimer;
+
+        this.farStarTimer = settings.farStarTimer;
+
+        // Set groups
 
         this.enemyGroup = this.physics.add.group({
             collideWorldBounds: true,
@@ -373,11 +431,15 @@ class gameScene extends Phaser.Scene {
             runChildUpdate: true
         });
 
-        cursor = this.physics.add.image(-100, -100, 'cursor');
+        this.closeStars = this.add.group({
+            classType: CloseStar
+        })
 
-        shield = new Shield(this);
+        this.farStars = this.add.group({
+            classType: FarStar
+        })
 
-        keys = this.input.keyboard.addKeys('W,A,S,D,C');
+        // Set input events
 
         this.input.on('pointermove', (pointer) => {
             cursor.setPosition(pointer.x, pointer.y)
@@ -390,6 +452,8 @@ class gameScene extends Phaser.Scene {
         this.input.on('pointerup', pointer => {
             player.fireBullet = false;
         })
+
+        // Set overlaps and colliders
 
         this.physics.add.overlap(shield, this.enemyBullets, (s, b) => {
             b.destroy();
@@ -419,6 +483,7 @@ class gameScene extends Phaser.Scene {
 
         this.handleKeys();
         this.trySpawn(delta);
+        this.tryFireStar(delta);
     }
 
     handleKeys() {
@@ -489,6 +554,38 @@ class gameScene extends Phaser.Scene {
         switch(rand) {
             case 0: return new Shuffler(this, point.x, point.y);
             case 1: return new Spinner(this, point.x, point.y);
+        }
+    }
+
+    tryFireStar(delta) {
+        if (this.closeStarTimer > 0) {
+            this.closeStarTimer -= delta;
+        } else {
+            let x = Phaser.Math.Between(0, WIDTH);
+            this.fireCloseStar(x);
+            this.closeStarTimer = settings.closeStarTimer;
+        }
+
+        if (this.farStarTimer > 0) {
+            this.farStarTimer -= delta;
+        } else {
+            let x = Phaser.Math.Between(0, WIDTH);
+            this.fireFarStar(x);
+            this.farStarTimer = settings.farStarTimer;
+        }
+    }
+
+    fireCloseStar(x) {
+        let star = this.closeStars.get().setActive(true).setVisible(true);
+        if (star) {
+            star.fire(x);
+        }
+    }
+
+    fireFarStar(x) {
+        let star = this.farStars.get().setActive(true).setVisible(true);
+        if (star) {
+            star.fire(x);
         }
     }
 }
