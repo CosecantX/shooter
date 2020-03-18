@@ -26,6 +26,7 @@ const settings = {
     pickupHP: 10,
     pickupScore: 10,
     dropRot: 0.03,
+    pickupDuration: 5000,
 
     shfFireRate: 300,
     shfMoveRate: 500,
@@ -220,10 +221,13 @@ class Pickup extends Phaser.Physics.Arcade.Sprite {
         super(scene, -100, -100, 'pickup');
         scene.physics.add.existing(scene.add.existing(this));
         this.setDepth(1);
-    }
-
-    update() {
-        this.setRotation(this.rotation += settings.dropRot);
+        scene.add.tween({
+            targets: this,
+            duration: settings.pickupDuration,
+            ease: 'Linear',
+            rotation: 2 * Math.PI,
+            loop: -1
+        })
     }
 
     tryDrop(source) {
@@ -473,7 +477,6 @@ class gameScene extends Phaser.Scene {
 
         this.pickups = this.physics.add.group({
             classType: Pickup,
-            runChildUpdate: true
         })
 
         // Set input events
