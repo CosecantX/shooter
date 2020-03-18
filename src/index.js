@@ -22,6 +22,10 @@ const settings = {
     farStarDuration: 8000,
     closeStarTimer: 500,
     farStarTimer: 500,
+    dropRate: .25,
+    pickupHP: 10,
+    pickupScore: 10,
+    dropRot: 0.03,
 
     shfFireRate: 300,
     shfMoveRate: 500,
@@ -119,7 +123,7 @@ class Ship extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(scene.add.existing(this));
         this.setDepth(1);
     }
-    
+
     preUpdate(time, delta) {
         this.update(time, delta)
     }
@@ -161,7 +165,7 @@ class Player extends Ship {
             this.fireTimer = settings.playerFireRate;
         }
     }
-    
+
     hit() {
         if (this.hitOK) {
             this.removeHP(settings.playerHitHP);
@@ -192,7 +196,7 @@ class Player extends Ship {
 
 class Shield extends Phaser.Physics.Arcade.Image {
     constructor(scene) {
-        super(scene, 100, 100, 'shield');
+        super(scene, -100, -100, 'shield');
         scene.physics.add.existing(scene.add.existing(this));
         this.setSize(this.height, this.height);
         this.setDepth(1);
@@ -208,6 +212,30 @@ class Shield extends Phaser.Physics.Arcade.Image {
         let point = new Phaser.Geom.Point(player.x + settings.shieldDistance * Math.cos(angle), player.y + settings.shieldDistance * Math.sin(angle));
         this.x = point.x;
         this.y = point.y;
+    }
+}
+
+class Pickup extends Phaser.Physics.Arcade.Sprite {
+    constructor(scene) {
+        super(scene, -100, -100, 'pickup');
+        scene.physics.add.existing(scene.add.existing(this));
+        this.setDepth(1);
+    }
+
+    update() {
+        this.setRotation(this.rotation += settings.dropRot);
+    }
+
+    tryDrop(source) {
+        if (settings.dropRate >= Math.random()) {
+            this.drop(source);
+        }
+    }
+
+    drop(source) {
+        this.x = source.x;
+        this.y = source.y;
+        this.setActive(true).setVisible(true);
     }
 }
 
@@ -339,9 +367,12 @@ class Star extends Phaser.GameObjects.Image {
         this.scene.add.tween({
             targets: this,
             duration: this.duration,
-            y: {start: -10, to: HEIGHT + 10},
+            y: {
+                start: -10,
+                to: HEIGHT + 10
+            },
             ease: 'Linear',
-            onComplete: function(tween, targets) {
+            onComplete: function (tween, targets) {
                 targets.forEach(e => {
                     e.setActive(false);
                     e.setVisible(false);
@@ -378,6 +409,7 @@ class loadScene extends Phaser.Scene {
         this.load.image('shield', 'assets/shield.png');
         this.load.image('star-close', 'assets/star-close.png');
         this.load.image('star-far', 'assets/star-far.png');
+        this.load.image('pickup', 'assets/pickup.png');
     }
 
     create() {
@@ -439,6 +471,11 @@ class gameScene extends Phaser.Scene {
             classType: FarStar
         })
 
+        this.pickups = this.physics.add.group({
+            classType: Pickup,
+            runChildUpdate: true
+        })
+
         // Set input events
 
         this.input.on('pointermove', (pointer) => {
@@ -472,6 +509,17 @@ class gameScene extends Phaser.Scene {
             e.destroy();
             score += settings.scoreEnemy;
             text2.setText('Score: ' + score);
+
+            let pickup = this.pickups.get();
+            pickup.tryDrop(e);
+        })
+
+        this.physics.add.overlap(player, this.pickups, (pl, pu) => {
+            player.addHP(settings.pickupHP);
+            score += settings.pickupScore;
+            pu.x = -100;
+            pu.y = -100;
+            pu.setActive(false).setVisible(false);
         })
 
         this.physics.add.collider(player, this.enemyGroup);
@@ -529,10 +577,13 @@ class gameScene extends Phaser.Scene {
             targets: enemy1,
             ease: 'Linear',
             duration: 500,
-            y: {start: -10, to: 20},
-            onComplete: function(tween, targets) {
+            y: {
+                start: -10,
+                to: 20
+            },
+            onComplete: function (tween, targets) {
                 targets.forEach(e => {
-                   e.scene.enemyGroup.add(e);
+                    e.scene.enemyGroup.add(e);
                 })
             }
         })
@@ -540,8 +591,11 @@ class gameScene extends Phaser.Scene {
             targets: enemy2,
             ease: 'Linear',
             duration: 500,
-            y: {start: (HEIGHT + 10), to: (HEIGHT - 20)},
-            onComplete: function(tween, targets) {
+            y: {
+                start: (HEIGHT + 10),
+                to: (HEIGHT - 20)
+            },
+            onComplete: function (tween, targets) {
                 targets.forEach(e => {
                     e.scene.enemyGroup.add(e);
                 })
@@ -551,9 +605,11 @@ class gameScene extends Phaser.Scene {
 
     pickEnemy(point) {
         let rand = Phaser.Math.Between(0, 1);
-        switch(rand) {
-            case 0: return new Shuffler(this, point.x, point.y);
-            case 1: return new Spinner(this, point.x, point.y);
+        switch (rand) {
+            case 0:
+                return new Shuffler(this, point.x, point.y);
+            case 1:
+                return new Spinner(this, point.x, point.y);
         }
     }
 
