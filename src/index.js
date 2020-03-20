@@ -16,6 +16,7 @@ const settings = {
     scoreEnemy: 100,
     scoreShot: 1,
     spawnTimer: 5000,
+    spawnDec: 100,
     bulletSpeed: 500,
     bulletLife: 2000,
     closeStarDuration: 4000,
@@ -462,6 +463,8 @@ class gameScene extends Phaser.Scene {
 
         this.spawnTimer = settings.spawnTimer;
 
+        this.spawnDec = 0;
+
         this.closeStarTimer = settings.closeStarTimer;
 
         this.farStarTimer = settings.farStarTimer;
@@ -583,7 +586,9 @@ class gameScene extends Phaser.Scene {
             this.spawnTimer -= delta;
         } else {
             this.spawn();
-            this.spawnTimer = settings.spawnTimer;
+            this.spawnDec += settings.spawnDec;
+            this.spawnTimer = settings.spawnTimer - this.spawnDec;
+            console.log(this.spawnTimer)
         }
     }
 
