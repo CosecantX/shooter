@@ -52,7 +52,9 @@ var shield;
 var keys;
 var text;
 var text2;
-var score = 0;
+var text3;
+var score;
+var highScore = parseInt(localStorage.getItem('highScore')) || 0;
 var topLine = new Phaser.Geom.Line(10, -10, WIDTH - 10, -10);
 var bottomLine = new Phaser.Geom.Line(10, HEIGHT + 10, WIDTH - 10, HEIGHT + 10);
 
@@ -440,6 +442,8 @@ class gameScene extends Phaser.Scene {
 
         // Set global vars
 
+        score = 0;
+
         player = new Player(this);
 
         cursor = this.physics.add.image(-100, -100, 'cursor');
@@ -451,6 +455,8 @@ class gameScene extends Phaser.Scene {
         text = this.add.text(10, 10, 'HP: ' + player.hp).setDepth(2);
 
         text2 = this.add.text(10, 30, 'Score: ' + score).setDepth(2);
+
+        text3 = this.add.text(10, 50, 'High Score: ' + highScore).setDepth(2);
 
         // Set timers
 
@@ -529,6 +535,7 @@ class gameScene extends Phaser.Scene {
         this.physics.add.overlap(player, this.pickups, (pl, pu) => {
             player.addHP(settings.pickupHP);
             score += settings.pickupScore;
+            text2.setText('Score: ' + score);
             pu.x = -100;
             pu.y = -100;
             pu.setActive(false).setVisible(false);
@@ -667,8 +674,16 @@ class gameOver extends Phaser.Scene {
         let go = this.add.text(CENTER_X, CENTER_Y - 200, 'GAME OVER');
         go.x = CENTER_X - (go.width / 2);
 
-        let scoretext = this.add.text(CENTER_X, CENTER_Y - 100, 'SCORE: ' + score);
+        let scoretext = this.add.text(CENTER_X, CENTER_Y - 100, 'Score: ' + score);
         scoretext.x = CENTER_X - (scoretext.width / 2);
+
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('highScore', highScore);
+        }
+
+        let hs = this.add.text(CENTER_X, CENTER_Y, 'High Score: ' + highScore);
+        hs.x = CENTER_X - (hs.width / 2);
 
         let restart = this.add.text(CENTER_X, CENTER_Y + 100, 'Restart?');
         restart.x = CENTER_X - (restart.width / 2);
