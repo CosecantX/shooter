@@ -24,7 +24,7 @@ const settings = {
     farStarTimer: 500,
     dropRate: .25,
     pickupHP: 10,
-    pickupScore: 10,
+    pickupScore: 500,
     dropRot: 0.03,
     pickupDuration: 5000,
 
@@ -62,7 +62,7 @@ window.onload = function () {
         parent: "cnv",
         width: WIDTH,
         height: HEIGHT,
-        scene: [loadScene, gameScene],
+        scene: [loadScene, gameScene, gameOver],
         physics: {
             default: 'arcade',
             arcade: {
@@ -179,7 +179,8 @@ class Player extends Ship {
         this.hp -= num;
         if (this.hp <= 0) {
             this.hp = 0;
-            text.setText('GAMEOVER');
+            text.setText('HP: ' + this.hp);
+            this.scene.scene.start('GameOver');
         } else {
             text.setText('HP: ' + this.hp);
         }
@@ -360,7 +361,7 @@ class Spinner extends Ship {
 
 class Star extends Phaser.GameObjects.Image {
     constructor(scene, duration, texture) {
-        super(scene, -10, 10, texture);
+        super(scene, -10, -10, texture);
         scene.add.existing(this);
         this.duration = duration;
     }
@@ -404,6 +405,9 @@ class loadScene extends Phaser.Scene {
     }
 
     preload() {
+        let shoottext = this.add.text(CENTER_X, CENTER_Y - 200, 'Shooter Game');
+        shoottext.x = CENTER_X - (shoottext.width / 2);
+
         this.load.image('ship', 'assets/ship.png');
         this.load.image('shot', 'assets/shot.png');
         this.load.image('eshot', 'assets/eshot.png');
@@ -417,7 +421,12 @@ class loadScene extends Phaser.Scene {
     }
 
     create() {
-        this.scene.start('GameScene');
+        let start = this.add.text(CENTER_X, CENTER_Y, 'CLICK TO START');
+        start.x = CENTER_X - (start.width / 2);
+        start.setInteractive();
+        start.on('pointerdown', e => {
+            this.scene.start('GameScene');
+        })
     }
 }
 
@@ -646,6 +655,27 @@ class gameScene extends Phaser.Scene {
         if (star) {
             star.fire(x);
         }
+    }
+}
+
+class gameOver extends Phaser.Scene {
+    constructor() {
+        super('GameOver');
+    }
+
+    create() {
+        let go = this.add.text(CENTER_X, CENTER_Y - 200, 'GAME OVER');
+        go.x = CENTER_X - (go.width / 2);
+
+        let scoretext = this.add.text(CENTER_X, CENTER_Y - 100, 'SCORE: ' + score);
+        scoretext.x = CENTER_X - (scoretext.width / 2);
+
+        let restart = this.add.text(CENTER_X, CENTER_Y + 100, 'Restart?');
+        restart.x = CENTER_X - (restart.width / 2);
+        restart.setInteractive();
+        restart.on('pointerdown', e => {
+            this.scene.start('GameScene');
+        })
     }
 }
 
